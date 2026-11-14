@@ -7,11 +7,9 @@ from dotenv import load_dotenv
 import numpy as np
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 from sklearn.utils.class_weight import compute_class_weight
-load_dotenv()
+import json
 
-import mlflow
-mlflow.set_tracking_uri("sqlite:///mlflow.db")
-mlflow.set_experiment("banking77-intent")
+load_dotenv()
 
 
 PROJECT_ROOT = Path.cwd()
@@ -21,11 +19,20 @@ RANDOM_SEED = 42
 MAX_LEN = 64
 NUM_CLASSES = 77
 
+with open(PROJECT_ROOT / "src" / "id2label.json", 'r') as f:
+    id2label = json.load(f)
+    id2label = {int(i): label  for i, label in  id2label.items()}
+    label2id = {label: int(i) for i, label in id2label.items()}
+
+
+
 
 model = AutoModelForSequenceClassification.from_pretrained(
     MODEL_NAME,
     cache_dir=PROJECT_ROOT / "transformers" / MODEL_NAME / "model",
-    num_labels = NUM_CLASSES
+    num_labels = NUM_CLASSES,
+    id2label = id2label,
+    label2id = label2id
 )
 tokenizer = AutoTokenizer.from_pretrained(
     MODEL_NAME,
@@ -76,7 +83,7 @@ training_args = TrainingArguments(
     learning_rate=3e-5,
     per_device_train_batch_size=32,
     per_device_eval_batch_size=64,
-    num_train_epochs=4,
+    num_train_epochs=5,
     weight_decay=0.01,
     eval_strategy="epoch",
     save_strategy="epoch",
@@ -84,9 +91,9 @@ training_args = TrainingArguments(
     metric_for_best_model="macro_f1",
     greater_is_better=True,
     logging_steps=50,
-    report_to="mlflow",
     run_name=f"{MODEL_NAME}_weighet_loss_lr3e-5_ep4",        
     seed=RANDOM_SEED,
+    max_steps=-1
 )
 
 trainer = WeightedTrainer(
@@ -99,6 +106,12 @@ trainer = WeightedTrainer(
 )
 
 trainer.train()
+
+
+test_preds = trainer.predict(test_dataset)
+metrics = test_preds.metrics
+for key in metrics.keys():
+    print(f"{key} \t\t{metrics[key]}")
 
 save_path = PROJECT_ROOT / "models" / training_args.run_name
 trainer.save_model(save_path)
