@@ -55,3 +55,25 @@
 * **Эксперименты:** MLflow, Optuna
 * **Бэкенд:** FastAPI, Uvicorn, Pydantic v2
 * **Деплой:** Docker, Dockerfile
+
+
+
+## 🚀 Готовая модель на Hugging Face
+
+Веса обученной модели и токенизатор опубликованы в открытом доступе на Hugging Face Hub:  
+👉 [**nzgl21/ticket-routing-distilbert**](https://huggingface.co/nzgl21/ticket-routing-distilbert)
+
+Вы можете протестировать инференс напрямую через библиотеку `transformers`:
+
+```python
+from transformers import pipeline
+
+classifier = pipeline(
+    "text-classification",
+    model="nzgl21/ticket-routing-distilbert"
+)
+
+ticket = "I was charged twice for my subscription, how can I get a refund?"
+result = classifier(ticket)
+print(result)
+# [{'label': 'wrong_exchange_rate_for_cash_withdrawal', 'score': ...}]
